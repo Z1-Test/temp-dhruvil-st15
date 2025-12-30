@@ -95,7 +95,7 @@ Existing beauty ecommerce platforms often:
 ### Target Market
 
 - **Primary**: Beauty-conscious consumers aged 18-45 who prioritize ethical, natural ingredients
-- **Geographic Focus**: Initial launch market to be determined
+- **Geographic Focus**: India (INR currency, English language, domestic shipping)
 - **Market Size**: To be quantified based on target geography
 
 ---
@@ -247,15 +247,16 @@ All UI components must use a **design system delivered via MCP** to ensure consi
 
 | Parameter         | Value                               |
 | ----------------- | ----------------------------------- |
-| **MCP Server**    | `TBD - Design System MCP`           |
-| **Design System** | `TBD - Component Library Name`      |
+| **MCP Server**    | `Deferred - Direct Lit Components`  |
+| **Design System** | `Direct component imports for MVP`  |
 
 **Constraints:**
-- Raw HTML/CSS is prohibited unless explicitly approved in a Feature Blueprint
-- All UI components must be sourced from the MCP-provided design system
+- MVP will use direct Lit component imports
+- MCP integration deferred to post-launch
+- Component library to be established before MCP wrapper
 - Custom styling requires documented justification and approval
 
-**Open Decision:** Design system selection and MCP integration strategy
+**Decision:** MCP requirement deferred; launch with direct imports, retrofit post-launch
 
 ---
 
@@ -360,7 +361,7 @@ Feature: Shopping Cart Management
 | **Availability**      | System uptime                                                | 99.9%                   | GCP monitoring        |
 | **Security**          | PCI DSS compliance (payment handling)                        | Full compliance         | Security audit        |
 | **Accessibility**     | WCAG 2.1 Level AA                                            | Full compliance         | Automated + Manual    |
-| **Data Privacy**      | GDPR compliance (if EU market)                               | Full compliance         | Legal review          |
+| **Data Privacy**      | India data compliance                                        | Full compliance         | Legal review          |
 | **Mobile**            | Responsive design breakpoints                                | 320px - 2560px          | Manual + Automated    |
 | **Observability**     | Transaction tracing                                          | 100% coverage           | OpenTelemetry         |
 
@@ -443,11 +444,9 @@ feature_fe_123_fl_456_cart_session_persistence_enabled
 
 ### Compliance Requirements
 
-- **GDPR** (if EU market): Data portability, right to erasure, consent management
-- **PCI DSS**: Payment card industry standards
-- **Regional regulations**: To be determined based on launch markets
-
-**Open Decision:** Geographic launch markets and associated compliance requirements
+- **India Market:** Data localization, GST handling
+- **PCI DSS:** Payment card industry standards
+- **Privacy:** User data protection and consent management
 
 ---
 
@@ -459,18 +458,18 @@ feature_fe_123_fl_456_cart_session_persistence_enabled
 | --------------------------------------- | ------- | ---------- | ------------------------------------------------------------ |
 | Payment gateway downtime                | High    | Low        | Implement retry logic, status monitoring, fallback messaging |
 | Shipping integration failures           | High    | Medium     | Graceful degradation, manual fulfillment fallback            |
-| Inventory accuracy (if managed)         | Medium  | Medium     | Real-time inventory sync, oversell prevention                |
+| Inventory accuracy                      | Medium  | Medium     | Real-time inventory sync, oversell prevention                |
 | Mobile performance on low-end devices   | Medium  | Medium     | Progressive enhancement, performance budgets                 |
 | Third-party service dependencies        | High    | Low        | Health checks, circuit breakers, SLA monitoring              |
 
 ### Assumptions
 
-1. **Product data source:** Product catalog will be managed via admin interface or import (mechanism TBD)
-2. **Inventory management:** Inventory tracking scope and integration TBD
+1. **Product data source:** Product catalog managed via CSV/JSON import initially
+2. **Inventory management:** Stock levels owned and managed in Firestore
 3. **Initial scale:** Platform designed for growth but initial traffic projections TBD
-4. **Geographic scope:** Single market launch assumed (market TBD)
-5. **Payment methods:** Cashfree supports required payment methods in target market
-6. **Shipping carriers:** Shiprocket supports target delivery regions
+4. **Geographic scope:** India market (INR, domestic shipping)
+5. **Payment methods:** Cashfree supports required payment methods in India market
+6. **Shipping carriers:** Shiprocket supports domestic India delivery
 
 ### Constraints
 
@@ -478,7 +477,7 @@ feature_fe_123_fl_456_cart_session_persistence_enabled
 2. **Budget:** Infrastructure and third-party service costs TBD
 3. **Timeline:** Launch timeline and milestone dates TBD
 4. **Team capacity:** Development and operations team size TBD
-5. **Regulatory:** Compliance requirements vary by launch market
+5. **Regulatory:** India market compliance requirements
 6. **Third-party dependencies:** Cashfree (payments), Shiprocket (shipping), Firebase services
 
 ---
@@ -495,12 +494,11 @@ The following are explicitly excluded from initial scope:
 - **Loyalty programs / rewards** — future consideration
 - **Subscription / auto-replenishment** — future consideration
 - **Gift cards / promotional codes** — future consideration
-- **Multi-currency support** — single currency assumed
-- **Multi-language support** — single language (lit-localize prepared but not activated)
+- **Multi-currency support** — INR only
+- **Multi-language support** — English only (lit-localize prepared but not activated)
 - **Live chat support** — future consideration
 - **Augmented reality (AR) try-on** — future consideration
-- **Admin product management UI** — managed via direct database or import initially
-- **Inventory management system** — integration TBD
+- **Admin product management UI** — managed via CSV/JSON import initially
 - **Returns/refunds workflow** — customer service managed initially
 
 ### Deferred Decisions
@@ -530,7 +528,7 @@ The following are explicitly excluded from initial scope:
    - Exit Criteria: User satisfaction threshold, performance targets met, no critical issues
 
 3. **General Availability (Public Launch)**
-   - Audience: All users in target market
+   - Audience: All users in India market
    - Rollout: Progressive via feature flags (10% → 25% → 50% → 100%)
    - Duration: TBD (progressive rollout period)
    - Monitoring: Real-time KPI tracking, error rate monitoring, user feedback
@@ -542,8 +540,6 @@ All features follow progressive delivery:
 - Internal testing (flag on for team)
 - Percentage-based rollout (1% → 10% → 50% → 100%)
 - Monitoring period before flag removal
-
-**Open Decision:** Specific rollout timelines, beta audience criteria, success thresholds
 
 ---
 
@@ -559,9 +555,10 @@ All features follow progressive delivery:
 
 ### Supporting Documents
 
+- Clarifications: `docs/planning/CLARIFICATIONS.md`
+- Roadmap: `docs/product/roadmap.md`
 - Architecture Decision Records (ADRs): `docs/decisions/` (to be created)
 - API Schema Documentation: `docs/api/` (to be generated)
-- Design System Guidelines: `docs/design/` (pending design system selection)
 
 ### Change History
 
@@ -571,4 +568,4 @@ All features follow progressive delivery:
 
 ---
 
-**Document Status:** Draft — Pending Clarifications & Roadmap Decomposition
+**Document Status:** Draft — Ready for Epic & Feature Specification
