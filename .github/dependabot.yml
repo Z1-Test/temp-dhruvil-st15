@@ -11,7 +11,7 @@ updates:
     registries: "*"
     schedule:
       interval: "daily"
-      time: "16:00"
+      time: "16:15"
       timezone: "Asia/Kolkata"
     groups:
       staystack:
