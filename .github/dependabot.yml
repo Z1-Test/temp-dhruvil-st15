@@ -1,0 +1,45 @@
+version: 2
+registries:
+  github-pkg:
+    type: "npm-registry"
+    url: "https://npm.pkg.github.com"
+    token: "${{secrets.GITHUB_TOKEN}}"
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    registries: "*"
+    schedule:
+      interval: "daily"
+      time: "16:00"
+      timezone: "Asia/Kolkata"
+    groups:
+      staystack:
+        patterns:
+          - "*staystack*"
+          - "@staytuned*/*"
+      development-minor-patch:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      security-patches:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    open-pull-requests-limit: 5
