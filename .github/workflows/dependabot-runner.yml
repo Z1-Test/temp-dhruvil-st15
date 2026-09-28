@@ -1,0 +1,21 @@
+name: "Dependabot Self-Hosted Runner"
+
+on:
+  schedule:
+    - cron: "10 11 * * *" # Daily at 16:40 IST (11:10 UTC)
+  workflow_dispatch:
+
+jobs:
+  dependabot:
+    name: "Run Dependabot"
+    runs-on: shr
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Dependabot Action
+        uses: github/dependabot-action@main
+        with:
+          package-manager: "npm_and_yarn"
+          directory: "/"
+          token: ${{ secrets.NODE_AUTH_TOKEN }}
