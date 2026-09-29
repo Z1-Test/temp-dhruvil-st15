@@ -2,7 +2,7 @@ name: "Dependabot Self-Hosted Runner"
 
 on:
   schedule:
-    - cron: "10 11 * * *" # Daily at 16:40 IST (11:10 UTC)
+    - cron: "45 3 * * *" # Daily at 09:15 IST (03:45 UTC)
   workflow_dispatch:
 
 jobs:
