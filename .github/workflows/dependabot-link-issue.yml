@@ -45,6 +45,10 @@ jobs:
 
           # 4. Construct issue title & body with structured sections and acceptance criteria
           ISSUE_TITLE="[Dependabot] ${PR_TITLE}"
+          if [ ${#ISSUE_TITLE} -gt 49 ]; then
+            ISSUE_TITLE="${ISSUE_TITLE:0:46}..."
+          fi
+
           ISSUE_BODY=$(cat <<EOF | sed 's/^ *//'
           ### Objective
           Automated update tracking for Dependabot pull request #${PR_NUMBER}.
@@ -70,6 +74,12 @@ jobs:
 
           ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
           echo "Successfully created Issue #${ISSUE_NUMBER} (${ISSUE_URL})"
+
+          # Set Priority P1 to satisfy organization issue-priority checks
+          echo '{"issue_field_values": [{"field_id": 3138, "value": "P1"}]}' | \
+            gh api "repos/${REPO}/issues/${ISSUE_NUMBER}/issue-field-values" \
+              -X POST -H "Accept: application/vnd.github+json" \
+              --input - || true
 
           # 5. Append 'Closes #<issue>' keyword to the PR body using standard input
           UPDATED_BODY=$(printf "%s\n\n---\n### Tracking Issue\nCloses #%s\n" "$CURRENT_BODY" "$ISSUE_NUMBER")
