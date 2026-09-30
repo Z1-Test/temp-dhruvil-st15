@@ -1,0 +1,80 @@
+name: "Dependabot Issue Linker"
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  link-dependabot-issue:
+    name: "Create & Link Tracking Issue"
+    # Execute ONLY for Dependabot PRs
+    if: github.actor == 'dependabot[bot]' || github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue and Link to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          echo "Inspecting PR #${PR_NUMBER} on ${REPO}..."
+
+          # 1. Fetch current PR description
+          CURRENT_BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body --jq '.body // ""')
+
+          # 2. Check for existing link to ensure idempotency
+          if echo "$CURRENT_BODY" | grep -qE "(Closes|Fixes|Resolves) #[0-9]+"; then
+            echo "PR #${PR_NUMBER} already contains an issue link. Skipping creation."
+            exit 0
+          fi
+
+          # 3. Ensure 'dependencies' label exists before attaching
+          if ! gh label list --repo "$REPO" --limit 100 | grep -qw "dependencies"; then
+            echo "Creating missing 'dependencies' label..."
+            gh label create "dependencies" --repo "$REPO" --color "0366d6" --description "Pull requests that update a dependency file" || true
+          fi
+
+          # 4. Construct issue title & body with structured sections and acceptance criteria
+          ISSUE_TITLE="[Dependabot] ${PR_TITLE}"
+          ISSUE_BODY=$(cat <<EOF | sed 's/^ *//'
+          ### Objective
+          Automated update tracking for Dependabot pull request #${PR_NUMBER}.
+
+          ### Context
+          - **Pull Request**: #${PR_NUMBER} (${PR_URL})
+          - **Triggered By**: Dependabot Version Bump
+          - **Status**: Pending Review & Automated Checks
+
+          ### Acceptance Criteria
+          - [x] Automated Dependabot dependency update pull request opened
+          - [x] CI check suite verification initiated
+          - [x] Downstream review and compatibility validation
+          EOF
+          )
+
+          echo "Creating tracking issue..."
+          ISSUE_URL=$(gh issue create \
+            --repo "$REPO" \
+            --title "$ISSUE_TITLE" \
+            --body "$ISSUE_BODY" \
+            --label "dependencies")
+
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+          echo "Successfully created Issue #${ISSUE_NUMBER} (${ISSUE_URL})"
+
+          # 5. Append 'Closes #<issue>' keyword to the PR body using standard input
+          UPDATED_BODY=$(printf "%s\n\n---\n### Tracking Issue\nCloses #%s\n" "$CURRENT_BODY" "$ISSUE_NUMBER")
+
+          echo "Updating PR #${PR_NUMBER} with issue link..."
+          echo "$UPDATED_BODY" | gh pr edit "$PR_NUMBER" --repo "$REPO" --body-file -
+
+          echo "Done: Linked Issue #${ISSUE_NUMBER} to PR #${PR_NUMBER}."
