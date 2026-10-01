@@ -10,7 +10,7 @@ updates:
     registries: "*"
     schedule:
       interval: "daily"
-      time: "09:40"
+      time: "10:10"
       timezone: "Asia/Kolkata"
     labels: []
     groups:
