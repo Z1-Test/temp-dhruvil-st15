@@ -36,29 +36,7 @@ jobs:
               return;
             }
 
-            // 2. Ensure 'dependencies' label exists
-            try {
-              await github.rest.issues.getLabel({
-                ...repo,
-                name: 'dependencies',
-              });
-            } catch (err) {
-              if (err.status === 404) {
-                core.info("Creating missing 'dependencies' label...");
-                try {
-                  await github.rest.issues.createLabel({
-                    ...repo,
-                    name: 'dependencies',
-                    color: '0366d6',
-                    description: 'Pull requests that update a dependency file',
-                  });
-                } catch (labelErr) {
-                  core.warning(`Label creation warning: ${labelErr.message}`);
-                }
-              }
-            }
-
-            // 3. Construct issue title (truncate to <= 49 chars to satisfy org rules)
+            // 2. Construct issue title (truncate to <= 49 chars to satisfy org rules)
             let issueTitle = `[Dependabot] ${pr.title}`;
             if (issueTitle.length > 49) {
               issueTitle = issueTitle.slice(0, 46) + '...';
@@ -77,18 +55,17 @@ jobs:
             - [x] CI check suite verification initiated
             - [x] Downstream review and compatibility validation`.replace(/^ {12}/gm, '');
 
-            // 4. Create the tracking issue
+            // 3. Create the tracking issue
             core.info('Creating tracking issue...');
             const newIssue = await github.rest.issues.create({
               ...repo,
               title: issueTitle,
               body: issueBody,
-              labels: ['dependencies'],
             });
             const issueNumber = newIssue.data.number;
             core.info(`Successfully created Issue #${issueNumber} (${newIssue.data.html_url})`);
 
-            // 5. Set Priority P1 (field_id: 3138)
+            // 4. Set Priority P1 (field_id: 3138)
             try {
               await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/issue-field-values', {
                 ...repo,
