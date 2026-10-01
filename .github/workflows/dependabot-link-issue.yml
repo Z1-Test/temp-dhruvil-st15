@@ -36,7 +36,19 @@ jobs:
               return;
             }
 
-            // 2. Construct issue title (truncate to <= 49 chars to satisfy org rules)
+            // 2. Ensure PR has no labels (clear any default or added labels)
+            try {
+              await github.rest.issues.setLabels({
+                ...repo,
+                issue_number: pr.number,
+                labels: [],
+              });
+              core.info(`Ensured no labels on PR #${pr.number}`);
+            } catch (labelErr) {
+              core.warning(`Label clearance warning: ${labelErr.message}`);
+            }
+
+            // 3. Construct issue title (truncate to <= 49 chars to satisfy org rules)
             let issueTitle = `[Dependabot] ${pr.title}`;
             if (issueTitle.length > 49) {
               issueTitle = issueTitle.slice(0, 46) + '...';
@@ -55,7 +67,7 @@ jobs:
             - [x] CI check suite verification initiated
             - [x] Downstream review and compatibility validation`.replace(/^ {12}/gm, '');
 
-            // 3. Create the tracking issue
+            // 4. Create the tracking issue
             core.info('Creating tracking issue...');
             const newIssue = await github.rest.issues.create({
               ...repo,
@@ -63,14 +75,56 @@ jobs:
               body: issueBody,
             });
             const issueNumber = newIssue.data.number;
+            const issueNodeId = newIssue.data.node_id;
             core.info(`Successfully created Issue #${issueNumber} (${newIssue.data.html_url})`);
 
-            // 4. Set Priority P1 (field_id: 3138)
+            // 5. Set Issue Type to Upgrade
+            try {
+              let issueTypeId = 'IT_kwDOBlYEys4BvLVd';
+              try {
+                const repoData = await github.graphql(`
+                  query($owner: String!, $repo: String!) {
+                    repository(owner: $owner, name: $repo) {
+                      issueTypes(first: 25) {
+                        nodes {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                `, { owner: repo.owner, repo: repo.repo });
+                const upgradeType = repoData.repository?.issueTypes?.nodes?.find(t => /upgrade/i.test(t.name));
+                if (upgradeType) {
+                  issueTypeId = upgradeType.id;
+                }
+              } catch (queryErr) {
+                core.info(`Using fallback Upgrade issueTypeId: ${queryErr.message}`);
+              }
+
+              await github.graphql(`
+                mutation($id: ID!, $issueTypeId: ID!) {
+                  updateIssue(input: { id: $id, issueTypeId: $issueTypeId }) {
+                    issue {
+                      id
+                      issueType {
+                        name
+                      }
+                    }
+                  }
+                }
+              `, { id: issueNodeId, issueTypeId });
+              core.info(`Successfully set issue type to Upgrade on Issue #${issueNumber}`);
+            } catch (typeErr) {
+              core.warning(`Issue type setting warning: ${typeErr.message}`);
+            }
+
+            // 6. Set Priority P1 (field_id: 3129)
             try {
               await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/issue-field-values', {
                 ...repo,
                 issue_number: issueNumber,
-                issue_field_values: [{ field_id: 3138, value: 'P1' }],
+                issue_field_values: [{ field_id: 3129, value: 'P1' }],
                 headers: {
                   accept: 'application/vnd.github+json',
                 },
@@ -80,7 +134,7 @@ jobs:
               core.warning(`Priority field setting warning: ${fieldErr.message}`);
             }
 
-            // 6. Update PR description with 'Closes #<issue>'
+            // 7. Update PR description with 'Closes #<issue>'
             const updatedBody = currentBody
               ? `${currentBody}\n\n---\n### Tracking Issue\nCloses #${issueNumber}\n`
               : `---\n### Tracking Issue\nCloses #${issueNumber}\n`;
@@ -93,3 +147,4 @@ jobs:
             });
 
             core.info(`Done: Linked Issue #${issueNumber} to PR #${pr.number}.`);
+
