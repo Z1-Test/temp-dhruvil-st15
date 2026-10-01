@@ -14,77 +14,105 @@ jobs:
     name: "Create & Link Tracking Issue"
     # Execute ONLY for Dependabot PRs
     if: github.actor == 'dependabot[bot]' || github.event.pull_request.user.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: shr
     steps:
       - name: Create Issue and Link to PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed("No pull_request payload found.");
+              return;
+            }
 
-          echo "Inspecting PR #${PR_NUMBER} on ${REPO}..."
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            const currentBody = pr.body || '';
 
-          # 1. Fetch current PR description
-          CURRENT_BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body --jq '.body // ""')
+            // 1. Idempotency: Skip if an issue link already exists
+            if (/(Closes|Fixes|Resolves)\s+#[0-9]+/i.test(currentBody)) {
+              core.info(`PR #${pr.number} already contains an issue link. Skipping creation.`);
+              return;
+            }
 
-          # 2. Check for existing link to ensure idempotency
-          if echo "$CURRENT_BODY" | grep -qE "(Closes|Fixes|Resolves) #[0-9]+"; then
-            echo "PR #${PR_NUMBER} already contains an issue link. Skipping creation."
-            exit 0
-          fi
+            // 2. Ensure 'dependencies' label exists
+            try {
+              await github.rest.issues.getLabel({
+                ...repo,
+                name: 'dependencies',
+              });
+            } catch (err) {
+              if (err.status === 404) {
+                core.info("Creating missing 'dependencies' label...");
+                try {
+                  await github.rest.issues.createLabel({
+                    ...repo,
+                    name: 'dependencies',
+                    color: '0366d6',
+                    description: 'Pull requests that update a dependency file',
+                  });
+                } catch (labelErr) {
+                  core.warning(`Label creation warning: ${labelErr.message}`);
+                }
+              }
+            }
 
-          # 3. Ensure 'dependencies' label exists before attaching
-          if ! gh label list --repo "$REPO" --limit 100 | grep -qw "dependencies"; then
-            echo "Creating missing 'dependencies' label..."
-            gh label create "dependencies" --repo "$REPO" --color "0366d6" --description "Pull requests that update a dependency file" || true
-          fi
+            // 3. Construct issue title (truncate to <= 49 chars to satisfy org rules)
+            let issueTitle = `[Dependabot] ${pr.title}`;
+            if (issueTitle.length > 49) {
+              issueTitle = issueTitle.slice(0, 46) + '...';
+            }
 
-          # 4. Construct issue title & body with structured sections and acceptance criteria
-          ISSUE_TITLE="[Dependabot] ${PR_TITLE}"
-          if [ ${#ISSUE_TITLE} -gt 49 ]; then
-            ISSUE_TITLE="${ISSUE_TITLE:0:46}..."
-          fi
+            const issueBody = `### Objective
+            Automated update tracking for Dependabot pull request #${pr.number}.
 
-          ISSUE_BODY=$(cat <<EOF | sed 's/^ *//'
-          ### Objective
-          Automated update tracking for Dependabot pull request #${PR_NUMBER}.
+            ### Context
+            - **Pull Request**: #${pr.number} (${pr.html_url})
+            - **Triggered By**: Dependabot Version Bump
+            - **Status**: Pending Review & Automated Checks
 
-          ### Context
-          - **Pull Request**: #${PR_NUMBER} (${PR_URL})
-          - **Triggered By**: Dependabot Version Bump
-          - **Status**: Pending Review & Automated Checks
+            ### Acceptance Criteria
+            - [x] Automated Dependabot dependency update pull request opened
+            - [x] CI check suite verification initiated
+            - [x] Downstream review and compatibility validation`.replace(/^ {12}/gm, '');
 
-          ### Acceptance Criteria
-          - [x] Automated Dependabot dependency update pull request opened
-          - [x] CI check suite verification initiated
-          - [x] Downstream review and compatibility validation
-          EOF
-          )
+            // 4. Create the tracking issue
+            core.info('Creating tracking issue...');
+            const newIssue = await github.rest.issues.create({
+              ...repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['dependencies'],
+            });
+            const issueNumber = newIssue.data.number;
+            core.info(`Successfully created Issue #${issueNumber} (${newIssue.data.html_url})`);
 
-          echo "Creating tracking issue..."
-          ISSUE_URL=$(gh issue create \
-            --repo "$REPO" \
-            --title "$ISSUE_TITLE" \
-            --body "$ISSUE_BODY" \
-            --label "dependencies")
+            // 5. Set Priority P1 (field_id: 3138)
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/issue-field-values', {
+                ...repo,
+                issue_number: issueNumber,
+                issue_field_values: [{ field_id: 3138, value: 'P1' }],
+                headers: {
+                  accept: 'application/vnd.github+json',
+                },
+              });
+              core.info(`Successfully set Priority P1 on Issue #${issueNumber}`);
+            } catch (fieldErr) {
+              core.warning(`Priority field setting warning: ${fieldErr.message}`);
+            }
 
-          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
-          echo "Successfully created Issue #${ISSUE_NUMBER} (${ISSUE_URL})"
+            // 6. Update PR description with 'Closes #<issue>'
+            const updatedBody = currentBody
+              ? `${currentBody}\n\n---\n### Tracking Issue\nCloses #${issueNumber}\n`
+              : `---\n### Tracking Issue\nCloses #${issueNumber}\n`;
 
-          # Set Priority P1 to satisfy organization issue-priority checks
-          echo '{"issue_field_values": [{"field_id": 3138, "value": "P1"}]}' | \
-            gh api "repos/${REPO}/issues/${ISSUE_NUMBER}/issue-field-values" \
-              -X POST -H "Accept: application/vnd.github+json" \
-              --input - || true
+            core.info(`Updating PR #${pr.number} with issue link...`);
+            await github.rest.pulls.update({
+              ...repo,
+              pull_number: pr.number,
+              body: updatedBody,
+            });
 
-          # 5. Append 'Closes #<issue>' keyword to the PR body using standard input
-          UPDATED_BODY=$(printf "%s\n\n---\n### Tracking Issue\nCloses #%s\n" "$CURRENT_BODY" "$ISSUE_NUMBER")
-
-          echo "Updating PR #${PR_NUMBER} with issue link..."
-          echo "$UPDATED_BODY" | gh pr edit "$PR_NUMBER" --repo "$REPO" --body-file -
-
-          echo "Done: Linked Issue #${ISSUE_NUMBER} to PR #${PR_NUMBER}."
+            core.info(`Done: Linked Issue #${issueNumber} to PR #${pr.number}.`);

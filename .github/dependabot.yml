@@ -4,14 +4,13 @@ registries:
     type: "npm-registry"
     url: "https://npm.pkg.github.com"
     token: "${{secrets.NODE_AUTH_TOKEN}}"
-
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     registries: "*"
     schedule:
       interval: "daily"
-      time: "14:07"
+      time: "09:10"
       timezone: "Asia/Kolkata"
     groups:
       staystack:
@@ -39,7 +38,7 @@ updates:
       - "dependencies"
       - "npm"
     commit-message:
-      prefix: "deps"
-      prefix-development: "deps-dev"
+      prefix: "chore"
+      prefix-development: "chore"
       include: "scope"
     open-pull-requests-limit: 5
