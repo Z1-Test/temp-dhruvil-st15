@@ -10,7 +10,7 @@ updates:
     registries: "*"
     schedule:
       interval: "daily"
-      time: "09:10"
+      time: "09:22"
       timezone: "Asia/Kolkata"
     groups:
       staystack:
@@ -34,9 +34,11 @@ updates:
         update-types:
           - "patch"
           - "minor"
-    labels:
-      - "dependencies"
-      - "npm"
+    cooldown:
+      default-days: 0
+      semver-major-days: 0
+      semver-minor-days: 0
+      semver-patch-days: 0
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
