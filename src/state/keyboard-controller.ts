@@ -36,9 +36,35 @@ export class KeyboardController {
     }
 
     // Binary operators
-    if (key === "+" || key === "-" || key === "*" || key === "/" || key === "%") {
+    if (key === "+" || key === "-" || key === "*" || key === "/" || key === "%" || key === "^") {
       event.preventDefault?.();
       this.machine.inputOperator(key);
+      return true;
+    }
+
+    // Factorial !
+    if (key === "!") {
+      event.preventDefault?.();
+      this.machine.inputFactorial();
+      return true;
+    }
+
+    // Comma ,
+    if (key === ",") {
+      event.preventDefault?.();
+      this.machine.inputComma();
+      return true;
+    }
+
+    // Constants pi / e
+    if (key === "p" || key === "P") {
+      event.preventDefault?.();
+      this.machine.inputConstant("π");
+      return true;
+    }
+    if (key === "e" || key === "E") {
+      event.preventDefault?.();
+      this.machine.inputConstant("e");
       return true;
     }
 

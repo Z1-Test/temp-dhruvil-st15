@@ -4,9 +4,12 @@ import { OPERATOR_METADATA } from "../types/tokens.ts";
 
 export type ASTNode =
   | { type: "number"; value: Decimal }
+  | { type: "constant"; name: string }
   | { type: "unary"; operator: "-"; operand: ASTNode }
   | { type: "percent"; operand: ASTNode }
-  | { type: "binary"; operator: "+" | "-" | "*" | "/"; left: ASTNode; right: ASTNode };
+  | { type: "factorial"; operand: ASTNode }
+  | { type: "function"; name: string; args: ASTNode[] }
+  | { type: "binary"; operator: string; left: ASTNode; right: ASTNode };
 
 export class ParserError extends Error {
   public readonly code: "SYNTAX_ERROR" | "UNCLOSED_PARENTHESES";
@@ -20,9 +23,14 @@ export class ParserError extends Error {
   }
 }
 
+type RpnItem =
+  | Token
+  | { kind: "RPN_OP"; symbol: string; position: number }
+  | { kind: "RPN_FUNC"; name: string; argCount: number; position: number };
+
 /**
  * Shunting-Yard Parser constructing an Abstract Syntax Tree (AST) from token streams.
- * Enforces BODMAS operator precedence, auto-balances parentheses, and handles consecutive operators.
+ * Enforces operator precedence, auto-balances parentheses, and handles scientific functions and constants.
  */
 export class Parser {
   private readonly tokens: Token[];
@@ -40,16 +48,36 @@ export class Parser {
       return { type: "number", value: Decimal.ZERO };
     }
 
-    // Convert infix to postfix (RPN) via Shunting-Yard algorithm
-    const outputQueue: (Token | { kind: "RPN_OP"; symbol: string; position: number })[] = [];
+    const outputQueue: RpnItem[] = [];
     const operatorStack: Token[] = [];
+    // Track argument count for active functions on stack
+    const functionArgCountStack: number[] = [];
 
     for (const token of normalizedTokens) {
-      if (token.kind === "NUMBER") {
+      if (token.kind === "NUMBER" || token.kind === "CONSTANT") {
         outputQueue.push(token);
+      } else if (token.kind === "FUNCTION") {
+        operatorStack.push(token);
+        functionArgCountStack.push(1);
+      } else if (token.kind === "COMMA") {
+        while (operatorStack.length > 0 && operatorStack[operatorStack.length - 1].kind !== "LPAREN") {
+          const popped = operatorStack.pop()!;
+          outputQueue.push({
+            kind: "RPN_OP",
+            symbol: popped.kind === "UNARY_MINUS" ? "u-" : popped.value,
+            position: popped.position,
+          });
+        }
+        if (operatorStack.length === 0) {
+          throw new ParserError("Misplaced comma in expression", "SYNTAX_ERROR", token.position);
+        }
+        if (functionArgCountStack.length > 0) {
+          functionArgCountStack[functionArgCountStack.length - 1]++;
+        }
       } else if (token.kind === "PERCENT") {
-        // Postfix percentage has high precedence
         outputQueue.push({ kind: "RPN_OP", symbol: "%", position: token.position });
+      } else if (token.kind === "FACTORIAL") {
+        outputQueue.push({ kind: "RPN_OP", symbol: "!", position: token.position });
       } else if (token.kind === "UNARY_MINUS") {
         operatorStack.push(token);
       } else if (token.kind === "OPERATOR") {
@@ -96,6 +124,18 @@ export class Parser {
         if (!foundLparen) {
           throw new ParserError("Mismatched closing parenthesis", "SYNTAX_ERROR", token.position);
         }
+
+        // If top of stack is a function, pop it to output queue
+        if (operatorStack.length > 0 && operatorStack[operatorStack.length - 1].kind === "FUNCTION") {
+          const fnToken = operatorStack.pop()!;
+          const argCount = functionArgCountStack.pop() || 1;
+          outputQueue.push({
+            kind: "RPN_FUNC",
+            name: fnToken.value,
+            argCount,
+            position: fnToken.position,
+          });
+        }
       }
     }
 
@@ -105,7 +145,16 @@ export class Parser {
         if (!this.autoBalance) {
           throw new ParserError("Unclosed parenthesis in expression", "UNCLOSED_PARENTHESES", popped.position);
         }
-        // Auto-balance ignores remaining unclosed LPAREN on operator stack
+        continue;
+      }
+      if (popped.kind === "FUNCTION") {
+        const argCount = functionArgCountStack.pop() || 1;
+        outputQueue.push({
+          kind: "RPN_FUNC",
+          name: popped.value,
+          argCount,
+          position: popped.position,
+        });
         continue;
       }
       outputQueue.push({
@@ -123,6 +172,25 @@ export class Parser {
         nodeStack.push({
           type: "number",
           value: Decimal.fromString(item.value),
+        });
+      } else if (item.kind === "CONSTANT") {
+        nodeStack.push({
+          type: "constant",
+          name: item.value,
+        });
+      } else if (item.kind === "RPN_FUNC") {
+        const args: ASTNode[] = [];
+        for (let i = 0; i < item.argCount; i++) {
+          const arg = nodeStack.pop();
+          if (!arg) {
+            throw new ParserError(`Function "${item.name}" missing arguments`, "SYNTAX_ERROR", item.position);
+          }
+          args.unshift(arg);
+        }
+        nodeStack.push({
+          type: "function",
+          name: item.name,
+          args,
         });
       } else if (item.kind === "RPN_OP") {
         if (item.symbol === "u-") {
@@ -144,8 +212,17 @@ export class Parser {
             type: "percent",
             operand,
           });
+        } else if (item.symbol === "!") {
+          const operand = nodeStack.pop();
+          if (!operand) {
+            throw new ParserError("Factorial operator missing operand", "SYNTAX_ERROR", item.position);
+          }
+          nodeStack.push({
+            type: "factorial",
+            operand,
+          });
         } else {
-          // Binary operator (+, -, *, /)
+          // Binary operator (+, -, *, /, ^, mod, nCr, nPr)
           const right = nodeStack.pop();
           const left = nodeStack.pop();
           if (!left || !right) {
@@ -153,7 +230,7 @@ export class Parser {
           }
           nodeStack.push({
             type: "binary",
-            operator: item.symbol as "+" | "-" | "*" | "/",
+            operator: item.symbol,
             left,
             right,
           });
@@ -177,13 +254,11 @@ export class Parser {
   private normalizeTokens(rawTokens: Token[]): Token[] {
     let tokens: Token[] = [];
 
-    // Filter consecutive binary operators (e.g. 5 + * 3 -> 5 * 3)
     for (let i = 0; i < rawTokens.length; i++) {
       const current = rawTokens[i];
       if (current.kind === "OPERATOR") {
         const next = i + 1 < rawTokens.length ? rawTokens[i + 1] : null;
         if (next && next.kind === "OPERATOR") {
-          // Skip current, next will take its place (consecutive replacement)
           continue;
         }
       }
@@ -192,7 +267,12 @@ export class Parser {
 
     // Drop trailing binary operator if expression ended with one during auto-balance
     if (this.autoBalance && tokens.length > 0) {
-      while (tokens.length > 0 && (tokens[tokens.length - 1].kind === "OPERATOR" || tokens[tokens.length - 1].kind === "UNARY_MINUS")) {
+      while (
+        tokens.length > 0 &&
+        (tokens[tokens.length - 1].kind === "OPERATOR" ||
+          tokens[tokens.length - 1].kind === "UNARY_MINUS" ||
+          tokens[tokens.length - 1].kind === "COMMA")
+      ) {
         tokens.pop();
       }
     }

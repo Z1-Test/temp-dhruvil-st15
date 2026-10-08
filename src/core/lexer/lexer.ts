@@ -10,8 +10,39 @@ export class LexerError extends Error {
   }
 }
 
+const SCIENTIFIC_FUNCTIONS = new Set([
+  "sin",
+  "cos",
+  "tan",
+  "asin",
+  "acos",
+  "atan",
+  "sinh",
+  "cosh",
+  "tanh",
+  "asinh",
+  "acosh",
+  "atanh",
+  "csc",
+  "sec",
+  "cot",
+  "acsc",
+  "asec",
+  "acot",
+  "ln",
+  "log",
+  "log10",
+  "log2",
+  "sqrt",
+  "cbrt",
+  "exp",
+  "abs",
+  "fact",
+]);
+
 /**
  * Tokenizes mathematical expression strings into typed tokens.
+ * Supports standard arithmetic, scientific functions, trigonometry, combinatorial operators, and constants.
  */
 export class Lexer {
   private readonly input: string;
@@ -22,7 +53,7 @@ export class Lexer {
   }
 
   public tokenize(): Token[] {
-    const tokens: Token[] = [];
+    const rawTokens: Token[] = [];
     this.pos = 0;
 
     while (this.pos < this.input.length) {
@@ -34,28 +65,69 @@ export class Lexer {
         continue;
       }
 
-      // Numbers (including decimals like .5 or 12.5)
+      // Numbers (including decimals like .5 or 12.5 and scientific exponents e.g. 1e10)
       if (this.isDigit(ch) || (ch === "." && this.isDigit(this.peek(1)))) {
-        tokens.push(this.readNumber());
+        rawTokens.push(this.readNumber());
         continue;
       }
 
-      // Operators
+      // Constants represented by special unicode characters
+      if (ch === "π" || ch === "Π") {
+        rawTokens.push({ kind: "CONSTANT", value: "pi", position: this.pos });
+        this.pos++;
+        continue;
+      }
+      if (ch === "ϕ" || ch === "Φ") {
+        rawTokens.push({ kind: "CONSTANT", value: "phi", position: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      // Word identifiers: functions, constants, or text operators (nCr, nPr, mod, etc.)
+      if (this.isAlpha(ch)) {
+        const identToken = this.readIdentifier(rawTokens);
+        rawTokens.push(identToken);
+        continue;
+      }
+
+      // Power operator ^
+      if (ch === "^") {
+        rawTokens.push({ kind: "OPERATOR", value: "^", position: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      // Factorial operator !
+      if (ch === "!") {
+        rawTokens.push({ kind: "FACTORIAL", value: "!", position: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      // Comma separator
+      if (ch === ",") {
+        rawTokens.push({ kind: "COMMA", value: ",", position: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      // Operators (+, -, *, /, ×, ÷)
       if (ch === "+" || ch === "-" || ch === "*" || ch === "/" || ch === "×" || ch === "÷") {
         const startPos = this.pos;
         this.pos++;
 
         // Determine if minus is binary or unary
         if (ch === "-") {
-          const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null;
+          const prevToken = rawTokens.length > 0 ? rawTokens[rawTokens.length - 1] : null;
           const isUnary =
             !prevToken ||
             prevToken.kind === "OPERATOR" ||
             prevToken.kind === "UNARY_MINUS" ||
-            prevToken.kind === "LPAREN";
+            prevToken.kind === "LPAREN" ||
+            prevToken.kind === "COMMA";
 
           if (isUnary) {
-            tokens.push({
+            rawTokens.push({
               kind: "UNARY_MINUS",
               value: "-",
               position: startPos,
@@ -69,7 +141,7 @@ export class Lexer {
         if (ch === "×") normalized = "*";
         if (ch === "÷") normalized = "/";
 
-        tokens.push({
+        rawTokens.push({
           kind: "OPERATOR",
           value: normalized,
           position: startPos,
@@ -79,7 +151,7 @@ export class Lexer {
 
       // Percentage
       if (ch === "%") {
-        tokens.push({
+        rawTokens.push({
           kind: "PERCENT",
           value: "%",
           position: this.pos,
@@ -90,7 +162,7 @@ export class Lexer {
 
       // Parentheses
       if (ch === "(") {
-        tokens.push({
+        rawTokens.push({
           kind: "LPAREN",
           value: "(",
           position: this.pos,
@@ -100,7 +172,7 @@ export class Lexer {
       }
 
       if (ch === ")") {
-        tokens.push({
+        rawTokens.push({
           kind: "RPAREN",
           value: ")",
           position: this.pos,
@@ -112,11 +184,16 @@ export class Lexer {
       throw new LexerError(`Unexpected character "${ch}"`, this.pos);
     }
 
-    return tokens;
+    // Insert implicit multiplication where appropriate (e.g. 2π -> 2 * π, 2(3) -> 2 * (3))
+    return this.insertImplicitMultiplications(rawTokens);
   }
 
   private isDigit(ch: string | undefined): boolean {
     return ch !== undefined && ch >= "0" && ch <= "9";
+  }
+
+  private isAlpha(ch: string | undefined): boolean {
+    return ch !== undefined && /^[a-zA-Z]$/.test(ch);
   }
 
   private peek(offset: number = 0): string | undefined {
@@ -133,7 +210,6 @@ export class Lexer {
         this.pos++;
       } else if (ch === ".") {
         if (hasDot) {
-          // Double decimal point encountered in numeric literal
           break;
         }
         hasDot = true;
@@ -149,5 +225,82 @@ export class Lexer {
       value,
       position: start,
     };
+  }
+
+  private readIdentifier(tokens: Token[]): Token {
+    const start = this.pos;
+    while (this.pos < this.input.length && (this.isAlpha(this.input[this.pos]) || this.isDigit(this.input[this.pos]))) {
+      this.pos++;
+    }
+
+    const name = this.input.slice(start, this.pos);
+    const lower = name.toLowerCase();
+
+    // Check constants
+    if (lower === "pi") {
+      return { kind: "CONSTANT", value: "pi", position: start };
+    }
+    if (lower === "phi") {
+      return { kind: "CONSTANT", value: "phi", position: start };
+    }
+    if (lower === "e") {
+      // Single 'e' is Euler's constant
+      return { kind: "CONSTANT", value: "e", position: start };
+    }
+
+    // Check binary operators
+    if (lower === "ncr") {
+      return { kind: "OPERATOR", value: "nCr", position: start };
+    }
+    if (lower === "npr") {
+      return { kind: "OPERATOR", value: "nPr", position: start };
+    }
+    if (lower === "mod") {
+      return { kind: "OPERATOR", value: "mod", position: start };
+    }
+
+
+    // Check functions
+    if (SCIENTIFIC_FUNCTIONS.has(lower)) {
+      return { kind: "FUNCTION", value: lower, position: start };
+    }
+
+    throw new LexerError(`Unknown identifier "${name}"`, start);
+  }
+
+  private insertImplicitMultiplications(tokens: Token[]): Token[] {
+    const result: Token[] = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      const current = tokens[i];
+      result.push(current);
+
+      if (i + 1 < tokens.length) {
+        const next = tokens[i + 1];
+
+        const isLeftOperand =
+          current.kind === "NUMBER" ||
+          current.kind === "CONSTANT" ||
+          current.kind === "RPAREN" ||
+          current.kind === "PERCENT" ||
+          current.kind === "FACTORIAL";
+
+        const isRightOperand =
+          next.kind === "NUMBER" ||
+          next.kind === "CONSTANT" ||
+          next.kind === "FUNCTION" ||
+          next.kind === "LPAREN";
+
+        if (isLeftOperand && isRightOperand) {
+          result.push({
+            kind: "OPERATOR",
+            value: "*",
+            position: current.position + current.value.length,
+          });
+        }
+      }
+    }
+
+    return result;
   }
 }
