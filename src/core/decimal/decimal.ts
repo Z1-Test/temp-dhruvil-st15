@@ -197,9 +197,16 @@ export class Decimal {
     const absCoeff = isNeg ? -this.coefficient : this.coefficient;
     let s = absCoeff.toString();
 
+    if (this.scale === 0 && s.length > 20) {
+      const exp = s.length - 1;
+      const sig = (s[0] + "." + s.slice(1, 16)).replace(/0+$/, "").replace(/\.$/, "");
+      return `${isNeg ? "-" : ""}${sig}e+${exp}`;
+    }
+
     if (this.scale === 0) {
       return (isNeg ? "-" : "") + s;
     }
+
 
     if (s.length <= this.scale) {
       s = s.padStart(this.scale + 1, "0");
