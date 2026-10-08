@@ -8,6 +8,8 @@
 
 # Concept
 
+* [Universal Calculator Brand Guidelines](brand.md) - Canonical brand identity, voice, tone, logo rules, and core color values for Universal Calculator.
+* [Universal Calculator Design System](design.md) - A high-precision, dark-mode-first mathematical workbench interface anchored on slate canvases, vibrant sky computational accents, and emerald commit triggers with strict WCAG 2.2 AA contrast compliance and ergonomic keyboard parity.
 * [Calculator Technology Stack Strategy & Evaluation](tech.md) - Comprehensive evaluation of technology stack options, decoupling patterns, and runtime trade-offs for the Universal Calculator application.
 
 # Conventions

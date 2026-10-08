@@ -43,6 +43,8 @@ docs/context/
 ├── index.md                                   # OKF v0.2 concept catalog index
 ├── project/                                   # Project-level architecture and rules
 │   ├── vision.md                              # Product vision, mission, and non-goals
+│   ├── brand.md                               # Brand guidelines, voice, and color values
+│   ├── design.md                              # Design system tokens (Google Labs DESIGN.md)
 │   ├── tech.md                                # Technology stack evaluation and strategy
 │   ├── architecture.md                        # Macro system topology & AST pipeline
 │   ├── actors.md                              # User personas and actor profiles

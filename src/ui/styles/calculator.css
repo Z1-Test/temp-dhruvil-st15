@@ -1,22 +1,22 @@
 /* Universal Calculator - Accessible Stylesheet (WCAG 2.2 AA compliant) */
 
 :root {
-  --calc-bg: #1e293b;
-  --calc-surface: #0f172a;
-  --calc-display-bg: #020617;
-  --calc-text-primary: #f8fafc;
-  --calc-text-muted: #94a3b8;
-  --calc-error: #ef4444;
-  --calc-btn-digit-bg: #334155;
+  --calc-bg: var(--sl-surface, #1e293b);
+  --calc-surface: var(--sl-background, #0f172a);
+  --calc-display-bg: var(--sl-container-low, #020617);
+  --calc-text-primary: var(--sl-text-primary, #f8fafc);
+  --calc-text-muted: var(--sl-text-secondary, #94a3b8);
+  --calc-error: var(--sl-error, #ef4444);
+  --calc-btn-digit-bg: var(--sl-secondary, #334155);
   --calc-btn-digit-hover: #475569;
-  --calc-btn-op-bg: #0284c7;
+  --calc-btn-op-bg: var(--sl-primary, #0284c7);
   --calc-btn-op-hover: #0369a1;
   --calc-btn-action-bg: #475569;
   --calc-btn-action-hover: #64748b;
-  --calc-btn-equals-bg: #16a34a;
+  --calc-btn-equals-bg: var(--sl-success, #16a34a);
   --calc-btn-equals-hover: #15803d;
-  --calc-focus-ring: #38bdf8;
-  --calc-border: #334155;
+  --calc-focus-ring: var(--sl-info, #38bdf8);
+  --calc-border: var(--sl-outline-low, #334155);
   --calc-radius: 12px;
 }
 
