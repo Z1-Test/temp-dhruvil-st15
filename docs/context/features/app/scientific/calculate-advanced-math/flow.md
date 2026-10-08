@@ -1,7 +1,7 @@
 ---
 type: Flow
 title: "Calculate Advanced Scientific Functions User Flow"
-status: draft
+status: planning_ready
 description: "User interaction logic, angle toggling, secondary key switching, and formula evaluation for Scientific Mode."
 tags: [flow, scientific, user-flow, okf-v0.2]
 sources:

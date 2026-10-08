@@ -1,7 +1,7 @@
 ---
 type: Feature
 title: "Calculate Advanced Scientific & Transcendental Functions"
-status: draft
+status: planning_ready
 description: "Authoritative product problem, rules, boundary invariants, scope, and survivability matrix for Scientific Mode."
 tags: [feature, scientific, trigonometry, math, okf-v0.2]
 sources:

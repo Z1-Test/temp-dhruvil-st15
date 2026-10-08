@@ -1,7 +1,7 @@
 ---
 type: Test Cases
 title: "Calculate Advanced Scientific Functions Test Cases & Scenarios"
-status: draft
+status: planning_ready
 description: "Unified test scenarios, domain limits, angle mode accuracy, and traceability for Scientific Mode."
 tags: [cases, test-cases, scientific, trigonometry, math, okf-v0.2]
 sources:

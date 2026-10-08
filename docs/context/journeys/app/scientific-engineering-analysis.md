@@ -1,7 +1,7 @@
 ---
 type: Journey
 title: "STEM Researcher Scientific & Engineering Calculation Journey"
-status: draft
+status: planning_ready
 description: "Human story, beat-by-beat narrative, emotion signals, friction interventions, and overlay lifecycle for scientific calculations and engineering analysis."
 tags: [journey, user-journey, scientific, stem, trigonometry, experience, okf-v0.2]
 sources:
