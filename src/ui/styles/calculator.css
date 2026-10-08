@@ -1,0 +1,158 @@
+/* Universal Calculator - Accessible Stylesheet (WCAG 2.2 AA compliant) */
+
+:root {
+  --calc-bg: var(--sl-surface, #1e293b);
+  --calc-surface: var(--sl-background, #0f172a);
+  --calc-display-bg: var(--sl-container-low, #020617);
+  --calc-text-primary: var(--sl-text-primary, #f8fafc);
+  --calc-text-muted: var(--sl-text-secondary, #94a3b8);
+  --calc-error: var(--sl-error, #ef4444);
+  --calc-btn-digit-bg: var(--sl-secondary, #334155);
+  --calc-btn-digit-hover: #475569;
+  --calc-btn-op-bg: var(--sl-primary, #0284c7);
+  --calc-btn-op-hover: #0369a1;
+  --calc-btn-action-bg: #475569;
+  --calc-btn-action-hover: #64748b;
+  --calc-btn-equals-bg: var(--sl-success, #16a34a);
+  --calc-btn-equals-hover: #15803d;
+  --calc-focus-ring: var(--sl-info, #38bdf8);
+  --calc-border: var(--sl-outline-low, #334155);
+  --calc-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--calc-surface);
+  color: var(--calc-text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.universal-calculator {
+  width: 100%;
+  max-width: 360px;
+  background-color: var(--calc-bg);
+  border-radius: var(--calc-radius);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--calc-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Display */
+.calculator-display {
+  background-color: var(--calc-display-bg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 110px;
+  text-align: right;
+  border-bottom: 1px solid var(--calc-border);
+}
+
+.display-formula {
+  font-size: 1rem;
+  color: var(--calc-text-muted);
+  min-height: 1.5rem;
+  margin-bottom: 4px;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.display-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--calc-text-primary);
+  line-height: 1.2;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.display-error {
+  color: var(--calc-error);
+  font-size: 1.5rem;
+}
+
+/* Keypad */
+.calculator-keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 16px;
+}
+
+.keypad-btn {
+  appearance: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--calc-text-primary);
+  min-height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.keypad-btn:active {
+  transform: scale(0.96);
+}
+
+.keypad-btn:focus-visible {
+  outline: 3px solid var(--calc-focus-ring);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/* Button Variants */
+.btn-digit {
+  background-color: var(--calc-btn-digit-bg);
+}
+
+.btn-digit:hover {
+  background-color: var(--calc-btn-digit-hover);
+}
+
+.btn-operator {
+  background-color: var(--calc-btn-op-bg);
+}
+
+.btn-operator:hover {
+  background-color: var(--calc-btn-op-hover);
+}
+
+.btn-action {
+  background-color: var(--calc-btn-action-bg);
+}
+
+.btn-action:hover {
+  background-color: var(--calc-btn-action-hover);
+}
+
+.btn-equals {
+  background-color: var(--calc-btn-equals-bg);
+}
+
+.btn-equals:hover {
+  background-color: var(--calc-btn-equals-hover);
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}

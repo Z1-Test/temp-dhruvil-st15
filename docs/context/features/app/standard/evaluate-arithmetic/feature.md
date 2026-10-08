@@ -1,7 +1,7 @@
 ---
 type: Feature
 title: "Evaluate Standard Arithmetic & Expression Preview"
-status: draft
+status: stable
 description: "Authoritative product problem, rules, boundary invariants, scope, and survivability matrix for Standard Arithmetic."
 tags: [feature, standard, arithmetic, okf-v0.2]
 sources:

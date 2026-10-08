@@ -1,7 +1,7 @@
 ---
 type: Test Cases
 title: "Evaluate Standard Arithmetic Test Cases & Scenarios"
-status: draft
+status: stable
 description: "Unified test scenarios, decimal precision verification, 12-stall matrix, and traceability for Standard Arithmetic."
 tags: [cases, test-cases, standard, arithmetic, okf-v0.2]
 sources:
