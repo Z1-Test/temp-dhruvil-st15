@@ -1,7 +1,7 @@
 ---
 type: Flow
 title: "Evaluate Standard Arithmetic User Flow"
-status: draft
+status: stable
 description: "User interaction logic, entry points, decision trees, recovery flows, and screen navigation for Standard Arithmetic."
 tags: [flow, standard, arithmetic, user-flow, okf-v0.2]
 sources:
