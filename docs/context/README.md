@@ -69,6 +69,7 @@ docs/context/
 │   └── history/manage-calculation-tape/       # Persistent tape log & memory registers
 └── journeys/app/                              # End-to-end macro user journey maps
     ├── standard-daily-calculation.md          # Everyday shopping & discount journey
+    ├── scientific-engineering-analysis.md     # STEM scientific & engineering analysis journey
     ├── programmer-binary-debugging.md         # Systems engineer bitwise debugging
     └── financial-mortgage-planning.md         # Mortgage planning & amortization export
 ```
